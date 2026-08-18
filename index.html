@@ -42,6 +42,7 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    flex: 1;
   }
   #tabnav button {
     background: rgba(255,255,255,0.12);
@@ -57,6 +58,39 @@
   }
   #tabnav button:hover { background: rgba(255,255,255,0.22); }
   #tabnav button.active { background: #fff; color: var(--blue-dark); }
+
+  /* ─── Music controls ─── */
+  #musicControls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  #musicBtn, #skipBtn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background .2s ease, transform .2s ease;
+    font-size: 17px;
+  }
+  #musicBtn:hover, #skipBtn:hover { background: rgba(255,255,255,0.24); transform: scale(1.06); }
+  #musicBtn.playing {
+    background: #fff;
+    color: var(--blue-dark);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.25);
+  }
+  #musicBtn .icon-on { display: none; }
+  #musicBtn.playing .icon-off { display: none; }
+  #musicBtn.playing .icon-on { display: inline; }
+
   #viewer-wrap {
     flex: 1;
     position: relative;
@@ -83,6 +117,7 @@
     #topbar { padding: 8px 10px; }
     #topbar .brand { font-size: 13px; width: 100%; }
     #tabnav button { font-size: 12px; padding: 6px 10px; }
+    #musicBtn, #skipBtn { width: 34px; height: 34px; font-size: 15px; }
   }
 </style>
 </head>
@@ -97,7 +132,17 @@
     <button data-tab="ata" onclick="showTab('ata')">Libreria Prompt ATA</button>
     <button data-tab="documentazione" onclick="showTab('documentazione')">Documentazione</button>
   </nav>
+  <div id="musicControls">
+    <button id="musicBtn" onclick="toggleMusic()" aria-label="Attiva o disattiva la musica di sottofondo" title="Musica di sottofondo">
+      <span class="icon-off">&#128264;</span><span class="icon-on">&#128266;</span>
+    </button>
+    <button id="skipBtn" onclick="skipTrack()" aria-label="Salta al brano successivo" title="Brano successivo">
+      &#9197;
+    </button>
+  </div>
 </div>
+
+<audio id="bgAudio" preload="none"></audio>
 
 <div id="viewer-wrap">
   <div id="loading">Caricamento…</div>
@@ -125,6 +170,56 @@
   }
 
   showTab('home');
+
+  /* ─── Background music (Play / Mute / Skip) ─── */
+  const TRACKS = [
+    'morning-first-draft.mp3',
+    'the-canegrate-manuscript.mp3',
+    'sunlight-on-oak.mp3',
+    'light-through-the-pane.mp3'
+  ];
+  let trackOrder = TRACKS.map((_, i) => i);
+  for (let i = trackOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [trackOrder[i], trackOrder[j]] = [trackOrder[j], trackOrder[i]];
+  }
+  let trackPos = 0;
+  const bgAudio = document.getElementById('bgAudio');
+  const musicBtn = document.getElementById('musicBtn');
+  bgAudio.volume = 0.35;
+
+  function loadTrack(pos) {
+    bgAudio.src = TRACKS[trackOrder[pos]];
+  }
+  loadTrack(trackPos);
+
+  bgAudio.addEventListener('ended', () => {
+    trackPos = (trackPos + 1) % trackOrder.length;
+    loadTrack(trackPos);
+    bgAudio.play().catch(() => {});
+  });
+
+  function toggleMusic() {
+    if (bgAudio.paused) {
+      bgAudio.play().then(() => {
+        musicBtn.classList.add('playing');
+      }).catch(() => {});
+    } else {
+      bgAudio.pause();
+      musicBtn.classList.remove('playing');
+    }
+  }
+
+  function skipTrack() {
+    const wasPlaying = !bgAudio.paused;
+    trackPos = (trackPos + 1) % trackOrder.length;
+    loadTrack(trackPos);
+    if (wasPlaying) {
+      bgAudio.play().then(() => {
+        musicBtn.classList.add('playing');
+      }).catch(() => {});
+    }
+  }
 </script>
 
 </body>
